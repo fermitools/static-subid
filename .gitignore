@@ -1,0 +1,6 @@
+build/
+BUILD/
+*.tar.gz
+*.swp
+RPMS
+SRPMS
