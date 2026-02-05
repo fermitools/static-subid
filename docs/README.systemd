@@ -1,0 +1,119 @@
+# systemd Integration
+
+This document describes the systemd services that automate subordinate UID/GID assignment using `static-subid`.
+
+## Components
+
+### System Services
+
+**`static-subid@.service`** - Template service that assigns subordinate UIDs/GIDs for a specific user.
+- Instance name is the username (e.g., `static-subid@alice.service`)
+- Runs `static-subid --subuid --subgid <username>`
+- Requires root privileges or polkit authorization
+
+### User Services
+
+**`setup-static-subid.service`** - User-scoped service that triggers subordinate ID assignment on login.
+- Automatically starts `static-subid@<username>.service` for the logged-in user
+- Runs in user session context
+
+### Authorization
+
+**`50-static-subid.rules`** - Polkit rule allowing users to start their own `static-subid@` instance without root password.
+- Grants unprivileged users permission to run `systemctl start static-subid@<their-username>.service`
+- Users cannot start services for other usernames
+
+## Usage Workflows
+
+### 1. Manual Assignment (Root)
+
+Administrator manually assigns subordinate IDs to specific users:
+
+```bash
+# Assign to single user
+sudo systemctl start static-subid@alice.service
+
+# Assign to multiple users
+for user in alice bob carol; do
+    sudo systemctl start static-subid@${user}.service
+done
+```
+
+**When to use**: One-time assignments, ad-hoc user setup, troubleshooting.
+
+### 2. Self-Service Assignment (Users)
+
+Users assign their own subordinate IDs without administrator intervention:
+
+```bash
+# User runs (no sudo required, polkit authorizes)
+systemctl start static-subid@$USER.service
+```
+
+**When to use**: Decentralized environments where users self-manage containers.
+
+**Requirements**: `50-static-subid.rules` must be installed in `/etc/polkit-1/rules.d/`.
+
+### 3. Automatic Assignment at Login
+
+Subordinate IDs are assigned automatically when a user first logs in:
+
+```bash
+# Enable for a specific user (run as that user)
+systemctl --user enable setup-static-subid.service
+
+# Enable for all users (run as root)
+sudo systemctl --user --global enable setup-static-subid.service
+```
+
+**When to use**: Centrally managed systems where all users need containers. Ensures subordinate IDs exist before users attempt to run containers.
+
+**Note**: Requires `50-static-subid.rules` for unprivileged operation.
+
+## Design Rationale
+
+### Why Multiple Services?
+
+- **`static-subid@.service`**: System-level primitive. Can be invoked by root, polkit, or automation. Works on headless systems.
+- **`setup-static-subid.service`**: User convenience wrapper. Simplifies enabling "assign on login" without requiring users to know their own username syntax.
+
+### Why Polkit Instead of Setuid?
+
+Polkit provides audited, policy-based authorization that integrates with systemd's security model. Setuid binaries bypass systemd's process confinement and require more careful security review.
+
+### Why oneshot with RemainAfterExit?
+
+Assignment is a one-time operation per boot (subordinate ID mappings persist in `/etc/sub{uid,gid}`). `RemainAfterExit=yes` prevents redundant execution if the service is triggered multiple times during a boot cycle.
+
+### Security Hardening
+
+The `static-subid@.service` template includes defense-in-depth restrictions:
+- Filesystem access limited to `/etc` writes only
+- Minimal system call surface (`@file-system`, `@process`)
+- No device access, kernel tunable modification, or cgroup manipulation
+- Resource limits prevent runaway behavior
+- Empty capability bounding set (operates with standard file permissions)
+
+## Troubleshooting
+
+**Service fails to start:**
+```bash
+# Check for detailed error messages
+journalctl -u static-subid@$USER.service -n 50
+
+# Verify user exists
+getent passwd $USER
+
+# Test manual execution
+sudo static-subid --subuid --subgid $USER
+```
+
+**Permission denied when user runs service:**
+- Verify `50-static-subid.rules` is installed in `/etc/polkit-1/rules.d/`
+- Check polkit logs: `journalctl -u polkit.service`
+- Ensure polkit service is running: `systemctl status polkit.service`
+
+**Subordinate IDs not assigned after login:**
+- Verify user service is enabled: `systemctl --user list-unit-files | grep setup-static-subid`
+- Check user service status: `systemctl --user status setup-static-subid.service`
+- Ensure user's systemd session is fully initialized: `loginctl show-user $USER`

@@ -1,0 +1,15 @@
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit").match(/^static-subid@[^@]+\.service$/) &&
+        action.lookup("verb") == "start") {
+
+        // Extract instance from unit name
+        var unit = action.lookup("unit");
+        var instance = unit.replace(/^static-subid@/, "").replace(/\.service$/, "");
+
+        // Allow if instance matches username
+        if (instance == subject.user) {
+            return polkit.Result.YES;
+        }
+    }
+});

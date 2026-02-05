@@ -1,0 +1,10 @@
+[Unit]
+Description=Initialize static subuid/subgid mappings
+Documentation=man:static-subid(8)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl start static-subid@%u.service
+
+[Install]
+WantedBy=default.target
