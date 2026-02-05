@@ -1,0 +1,329 @@
+= static-subid.conf(5)
+
+== NAME
+
+static-subid.conf - configuration files for static-subid
+
+== SYNOPSIS
+
+_/etc/static-subid/subid.conf_
+
+_/etc/static-subid/subid.conf.d/*.conf_
+
+== DESCRIPTION
+
+*static-subid* loads configuration from multiple sources in priority order, with later sources overriding earlier ones:
+
+1. Hardcoded defaults
+2. _/etc/login.defs_ (system login configuration, provided by shadow-utils)
+3. _/etc/static-subid/subid.conf_ (main configuration file)
+4. _/etc/static-subid/subid.conf.d/*.conf_ (drop-in directory, alphasorted)
+
+This layered approach allows system-wide defaults in _/etc/login.defs_ to be refined with static-subid specific settings in _/etc/static-subid/_, while drop-in files enable modular configuration for different environments or use cases.
+
+== FILE FORMAT
+
+Configuration files use a simple key-value format similar to shadow-utils:
+
+....
+KEY value
+....
+
+* Keys and values are separated by whitespace (spaces or tabs)
+* Blank lines are ignored
+* Lines starting with *#* are comments and are ignored
+* Leading and trailing whitespace is ignored
+* Last value wins for repeated keys (no warning)
+* Unknown keys are silently ignored (for compatibility with _/etc/login.defs_)
+
+Values must be:
+
+* Unsigned integers (no leading zeros, no signs, no hex/octal)
+* Boolean values: *yes*, *true*, *1* (true) or *no*, *false*, *0* (false)
+* Boolean parsing is case-insensitive
+
+== CONFIGURATION KEYS
+
+=== UID Range for Eligible Users
+
+*UID_MIN* (default: 1000)::
+    Minimum UID eligible for subordinate ID assignment. Users with UIDs below this threshold are typically system accounts and should not receive subordinate IDs.
+
+*UID_MAX* (default: 60000)::
+    Maximum UID eligible for subordinate ID assignment. Users with UIDs above this threshold will be rejected.
+
+=== Subordinate UID Configuration
+
+*SUB_UID_MIN* (default: 524288)::
+    Minimum value for subordinate UID ranges. This is the start of the pool from which subordinate UIDs are allocated.
+
+*SUB_UID_MAX* (default: 600100000)::
+    Maximum value for subordinate UID ranges. The end of the subordinate UID pool.
+
+*SUB_UID_COUNT* (default: 65536)::
+    Number of subordinate UIDs allocated per user. Each user receives a contiguous block of this many subordinate UIDs.
++
+Must not exceed compile-time limit (typically 128 * 65536). This should be sufficient for even large density environments.
+
+=== Subordinate GID Configuration
+
+*SUB_GID_MIN* (default: 524288)::
+    Minimum value for subordinate GID ranges.
+
+*SUB_GID_MAX* (default: 600100000)::
+    Maximum value for subordinate GID ranges.
+
+*SUB_GID_COUNT* (default: 65536)::
+    Number of subordinate GIDs allocated per user.
++
+Must not exceed compile-time limit (typically (128 * 65535)). This should be sufficient for even high density userspace container environments.
+
+=== Behavioral Options
+
+*SKIP_IF_EXISTS* (default: yes)::
+    When enabled, skip assignment if the user already has _any_ subordinate IDs assigned (checked via *getsubids*(1)). This prevents duplicate assignments if *useradd*(8) already added a user's range.
++
+When disabled, the tool will attempt assignment even if subordinate IDs already exist. Note that *usermod*(8) is intelligent enough not to create duplicate ranges for any user.
+
+*ALLOW_SUBID_WRAP* (default: no)::
+    **WARNING: SECURITY RISK - MAY CAUSE RANGE OVERLAPS AND PRIVILEGE ESCALATION**
++
+When enabled, allows range calculation to wrap around using modulo arithmetic when a UID would overflow the configured subordinate ID space. This treats the ID space as a ring buffer.
++
+**STRICT MODE (default, allow_subid_wrap=no)**::: Any arithmetic overflow is a hard error. Ensures non-overlapping, monotonic allocation. Suitable for production environments.
++
+**WRAP MODE (allow_subid_wrap=yes)**::: Uses modulo arithmetic to keep ranges within bounds. May cause range overlaps between users. **Only for development, testing, or tightly constrained lab environments. This is a security risk.**
++
+**WARNING**: Range overlaps can lead to container escapes and privilege escalation. Use only in controlled testing environments.
+
+== RANGE CALCULATION
+
+Subordinate ID ranges are calculated deterministically using:
+
+....
+start_id = SUB_UID_MIN + ((UID - UID_MIN) * SUB_UID_COUNT)
+end_id   = start_id + SUB_UID_COUNT - 1
+....
+
+The same formula applies to subordinate GIDs with their respective configuration values.
+
+=== Examples
+
+With default configuration (*UID_MIN*=1000, *SUB_UID_MIN*=100000, *SUB_UID_COUNT*=65536):
+
+|===
+|UID  |Calculation                    |Subordinate UID Range
+|1000 |100000 + ((1000-1000) * 65536) |100000-165535
+|1001 |100000 + ((1001-1000) * 65536) |165536-231071
+|1002 |100000 + ((1002-1000) * 65536) |231072-296607
+|1100 |100000 + ((1100-1000) * 65536) |6653600-6719135
+|===
+
+== SECURITY CONSIDERATIONS
+
+=== File Permissions
+
+All configuration files must meet these security requirements:
+
+* Owned by root (UID 0)
+* Not world-writable (mode denies S_IWOTH)
+* Config files must be regular files (not symlinks, devices, or other special files)
+* Config "directories" may instead be symlinks
+* Directories must also be root-owned and not world-writable
+
+Files failing these checks are ignored and do not terminate execution.
+
+=== Configuration Validation
+
+* All numeric values strictly validated as unsigned base 10 integers (no octal via leading zeros)
+* Arithmetic overflow checked during range calculations
+* UID overlap with subordinate ranges detected and rejected
+* Values exceeding compile-time limits rejected
+
+=== Drop-in Directory Processing
+
+Files in _/etc/static-subid/subid.conf.d/_ are processed in alphabetical order. Only files ending in _.conf_ are processed. Use prefixes to control ordering:
+
+....
+00-base.conf
+50-production.conf
+99-local.conf
+....
+
+== INTEGRATION WITH SHADOW-UTILS
+
+*static-subid* uses a different allocation algorithm than shadow-utils *useradd*(8) auto-assignment. The shadow-utils algorithm assigns subordinate IDs sequentially based on _/etc/subuid_ and _/etc/subgid_ contents which is order of operations dependent, while *static-subid* calculates ranges deterministically from the user's UID.
+
+**WARNING**: *Do not mix* *static-subid* with shadow-utils auto-assignment on the same system or across systems sharing _/etc/subuid_/_/etc/subgid_ via network storage. Mixing these methods will cause subordinate ID range conflicts and overlaps.
+
+Choose one method and use it consistently across your environment.
+
+To disable shadow-utils auto-assignment, set *SUB_UID_COUNT* and *SUB_GID_COUNT* to *0* in _/etc/login.defs_.
+
+Keys read from _/etc/login.defs_ match keys read from the *static-subid* configs. Unknown keys are ignored.
+
+== EXAMPLES
+
+=== Basic Configuration
+
+Example _/etc/static-subid/subid.conf_:
+
+....
+# static-subid configuration
+# Use defaults for most values
+
+# Only assign to regular users (1000-59999)
+UID_MIN 1000
+UID_MAX 59999
+
+# Standard container runtime defaults
+SUB_UID_MIN 100000
+SUB_UID_MAX 600100000
+SUB_UID_COUNT 65536
+
+SUB_GID_MIN 100000
+SUB_GID_MAX 600100000
+SUB_GID_COUNT 65536
+
+# Skip if user already has subordinate IDs
+SKIP_IF_EXISTS yes
+
+# Strict mode (no wrapping)
+ALLOW_SUBID_WRAP no
+....
+
+=== High-Density Environment
+
+For environments with many users and smaller subordinate ID allocations:
+
+....
+# Allocate smaller ranges to fit more users
+SUB_UID_COUNT 4096
+SUB_GID_COUNT 4096
+
+# Tighter subordinate ID pool
+SUB_UID_MIN 100000
+SUB_UID_MAX 10000000
+....
+
+With these settings, the subordinate ID space can accommodate:
+....
+(10000000 - 100000) / 4096 ≈ 2417 users
+....
+
+=== Drop-in Override Example
+
+Base configuration in _/etc/static-subid/subid.conf_:
+
+....
+SUB_UID_COUNT 65536
+SUB_GID_COUNT 65536
+....
+
+Override in _/etc/static-subid/subid.conf.d/50-high-density.conf_:
+
+....
+# Override for high-density compute nodes
+SUB_UID_COUNT 16384
+SUB_GID_COUNT 16384
+....
+
+The final effective configuration will use SUB_UID_COUNT=16384.
+
+=== Testing Configuration
+
+For development environments only:
+
+....
+# WARNING: WRAP MODE - NOT FOR PRODUCTION
+ALLOW_SUBID_WRAP yes
+
+# Smaller range for testing
+SUB_UID_MIN 200000
+SUB_UID_MAX 300000
+SUB_UID_COUNT 1000
+....
+
+== FILES
+
+_/etc/login.defs_::
+    System-wide login configuration. Read first (after hardcoded defaults).
+
+_/etc/static-subid/subid.conf_::
+    Main static-subid configuration file.
+
+_/etc/static-subid/subid.conf.d/_::
+    Drop-in configuration directory.
+
+_/etc/static-subid/subid.conf.d/*.conf_::
+    Drop-in configuration files (processed alphabetically).
+
+== DIAGNOSTICS
+
+Configuration loading errors are written to stderr. Use *--debug* flag with *static-subid*(8) to see detailed configuration loading information:
+
+....
+# static-subid --help --dump-config --debug
+....
+
+Common errors:
+
+*File not owned by root*::
+    Configuration file must be owned by UID 0.
+
+*File is world-writable*::
+    Remove world-write permission: `chmod o-w <file>`
+
+*Value exceeds limit*::
+    SUB_UID_COUNT or SUB_GID_COUNT exceeds compile-time limit.
+
+*Invalid number format*::
+    Values must be unsigned integers without leading zeros or signs.
+
+== NOTES
+
+=== Subordinate ID Space Planning
+
+When planning subordinate ID allocation:
+
+1. Calculate users capacity:
++
+....
+capacity = (SUB_UID_MAX - SUB_UID_MIN) / SUB_UID_COUNT
+....
+
+2. Ensure no overlap with system UID/GID ranges
+3. Leave headroom for future growth
+4. Consider synchronization with centralized user management systems
+
+=== Compile-Time Configuration
+
+Some values are set at compile time via CMake:
+
+*MAX_RANGES*:: Maximum subordinate IDs per user
+*LOGIN_DEFS_PATH*:: Path to login.defs (default _/etc/login.defs_)
+*CONFIG_FILE_PATH*:: Path to main config (default _/etc/static-subid/subid.conf_)
+*CONFIG_DIR_PATH*:: Path to drop-in directory (default _/etc/static-subid/subid.conf.d_)
+
+These paths can be overridden at build time for non-standard installations.
+
+== SEE ALSO
+
+*static-subid*(8),
+*login.defs*(5),
+*subuid*(5),
+*subgid*(5),
+*useradd*(8),
+*usermod*(8),
+*getsubids*(1),
+*user_namespaces*(7)
+
+== AUTHORS
+
+Pat Riehecky, Fermi Forward Discovery Group
+
+== BUGS
+
+Report bugs to https://github.com/fermitools/static-subid/.
+
+When *ALLOW_SUBID_WRAP* is enabled, subordinate ID ranges may overlap between users, creating potential security vulnerabilities including container escapes and privilege escalation. This is a known limitation of wrap mode. Use only in controlled testing environments.

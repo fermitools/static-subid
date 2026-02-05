@@ -1,0 +1,208 @@
+= static-subid(8)
+
+== NAME
+
+static-subid - assign deterministic subordinate UID/GID ranges for unprivileged containers
+
+== SYNOPSIS
+
+*static-subid* [_OPTIONS_] _USERNAME_|_UID_
+
+== DESCRIPTION
+
+*static-subid* assigns deterministic and idempotent subordinate user and group ID ranges to users based on their primary UID. This ensures consistent subordinate ID assignments across multiple systems when UIDs are synchronized.
+
+The tool calculates subordinate ID ranges using the formula:
+
+....
+start_id = SUB_UID_MIN + ((UID - UID_MIN) * SUB_UID_COUNT)
+....
+
+This deterministic approach guarantees that a user with a given UID will always receive the same subordinate ID range, making it suitable for environments with centralized user management (LDAP, NIS, etc.) or synchronized UIDs across systems, but not centralized subid management.
+
+Subordinate IDs are used by unprivileged container runtimes (Podman, Docker rootless mode, LXC) to provide user namespace isolation without requiring root privileges.
+
+=== Integration with shadow-utils
+
+*static-subid* uses a different allocation algorithm than shadow-utils *useradd*(8) auto-assignment. The shadow-utils algorithm assigns subordinate IDs sequentially based on _/etc/subuid_ and _/etc/subgid_ contents which is order of operations dependent, while *static-subid* calculates ranges deterministically from the user's UID.
+
+**WARNING**: *Do not mix* *static-subid* with shadow-utils auto-assignment on the same system or across systems sharing _/etc/subuid_/_/etc/subgid_ via network storage. Mixing these methods will cause subordinate ID range conflicts and overlaps.
+
+Choose one method and use it consistently across your environment.
+
+To disable shadow-utils auto-assignment, set *SUB_UID_COUNT* and *SUB_GID_COUNT* to *0* in _/etc/login.defs_.
+
+== OPTIONS
+
+*--subuid*::
+    Assign subordinate UIDs to the specified user.
+
+*--subgid*::
+    Assign subordinate GIDs to the specified user.
+
+*-d, --debug*::
+    Print detailed debug information to stderr, including configuration loading, range calculations, and command execution.
+
+*-n, --noop*::
+    Dry-run mode. Show what commands would be executed without actually making any changes.
+
+*-h, --help*::
+    Display usage information and exit.
+
+*--dump-config*::
+    When used with *--help*, also load and display the current configuration after the help text.
+
+*--version*::
+    Display version information and exit.
+
+== ARGUMENTS
+
+_USERNAME_::
+    A valid username following shadow-utils naming rules. Must start with a lowercase letter or underscore, may contain lowercase letters, digits, underscore, hyphen, period, and dollar sign. Cannot end with a hyphen or contain ';'.
+
+_UID_::
+    A numeric user ID. The tool will look up the corresponding username. Overlay users are unsupported.
+
+== MODES
+
+Both *--subuid* and *--subgid* may be specified together to assign both subordinate UID and GID ranges in a single invocation.
+
+At least one of *--subuid* or *--subgid* must be specified (unless using *--help* or *--version*).
+
+== CONFIGURATION
+
+Configuration is loaded from multiple sources in priority order (later sources override earlier ones):
+
+1. Hardcoded defaults
+2. _/etc/login.defs_ (provided by shadow-utils)
+3. _/etc/static-subid/subid.conf_
+4. _/etc/static-subid/subid.conf.d/*.conf_ (in alphabetical order)
+
+All configuration files must be owned by root (UID 0) and must not be world-writable.
+
+See *static-subid.conf*(5) for configuration file format and available settings.
+
+== SECURITY
+
+=== File Permissions
+
+Configuration files are validated for security:
+
+* Must be owned by root (UID 0)
+* Must not be world-writable
+* Config files must be regular files (not symlinks, devices, or other special files)
+* The *usermod* tool itself requires execution by root (UID 0)
+
+Files failing these checks are ignored and do not terminate execution.
+
+=== UID Overlap Protection
+
+The tool validates that primary UIDs do not overlap with subordinate ID ranges to prevent namespace confusion where a user's primary UID could conflict with another user's subordinate IDs.
+
+Example problem prevented:
+....
+User A (UID 1000) gets subuid range 100000-165535
+User B has UID 100000 (overlaps A's subordinate range)
+Inside A's container, files owned by subuid 100000 would map to user B
+....
+
+=== Configuration Validation
+
+* All numeric values strictly validated as unsigned base 10 integers (no octal via leading zeros)
+* Arithmetic overflow checked during range calculations
+* Values exceeding compile-time limits rejected
+
+== EXECUTION MODEL
+
+The tool uses *usermod*(8) to assign subordinate ID ranges and *getsubids*(1) to check for existing assignments.
+
+Both utilities are executed via *fork*(2) and *execl*(3) with absolute paths to prevent PATH injection attacks. Standard input is closed in child processes to prevent interaction.
+
+If an identical subid range is specified to what is already configured, no actions will be taken. This is a feature of *usermod*(8).
+
+== EXIT STATUS
+
+*0*::
+    Success.
+
+*1*::
+    Error occurred during execution. Details written to stderr.
+
+== EXAMPLES
+
+Assign both subordinate UIDs and GIDs to user alice:
+....
+# static-subid --subuid --subgid alice
+....
+
+Dry-run to see what would be assigned to UID 1000:
+....
+# static-subid --subuid --subgid --noop 1000
+static-subid: noop: would execute: /usr/sbin/usermod --add-subuids 100000-165535 alice
+static-subid: noop: would execute: /usr/sbin/usermod --add-subgids 100000-165535 alice
+....
+
+View loaded configuration:
+....
+# static-subid --help --dump-config
+....
+
+== ENVIRONMENT
+
+No environment variables affect the operation of *static-subid*.
+
+Paths to system utilities (*usermod*, *getsubids*) and configuration files are determined at build time.
+
+== FILES
+
+_/etc/login.defs_::
+    System login configuration (UID_MIN, UID_MAX, SUB_UID_MIN, etc.)
+
+_/etc/static-subid/subid.conf_::
+    Main configuration file for static-subid.
+
+_/etc/static-subid/subid.conf.d/*.conf_::
+    Drop-in configuration directory. Files processed in alphabetical order.
+
+Indirectly:
+
+_/etc/subuid_::
+    Subordinate UID database (modified by usermod).
+
+_/etc/subgid_::
+    Subordinate GID database (modified by usermod).
+
+== NOTES
+
+=== Interaction with SKIP_IF_EXISTS
+
+When *SKIP_IF_EXISTS* is enabled (default), the tool checks if _any_ existing subordinate ID assignments are present before calculating and assigning new ranges. This check queries via *getsubids*.
+
+=== Range Calculation Modes
+
+The tool operates in two modes controlled by *ALLOW_SUBID_WRAP*:
+
+*STRICT MODE (default, allow_subid_wrap=no)*:: Any arithmetic overflow or range exceeding the configured maximum is an error. Ensures non-overlapping, monotonic allocation suitable for production environments.
+
+*WRAP MODE (allow_subid_wrap=yes)*:: **WARNING: SECURITY RISK - MAY CAUSE RANGE OVERLAPS AND PRIVILEGE ESCALATION**. Treats the subordinate ID space as a ring buffer using modulo arithmetic. May cause range overlaps between users. Range overlaps can lead to container escapes and privilege escalation. Use only in controlled testing environments.
+
+== SEE ALSO
+
+*static-subid.conf*(5),
+*subuid*(5),
+*subgid*(5),
+*useradd*(8),
+*usermod*(8),
+*getsubids*(1),
+*user_namespaces*(7),
+*login.defs*(5)
+
+== AUTHORS
+
+Pat Riehecky, Fermi Forward Discovery Group
+
+== BUGS
+
+Report bugs to https://github.com/fermitools/static-subid/.
+
+When *ALLOW_SUBID_WRAP* is enabled, subordinate ID ranges may overlap between users, creating potential security vulnerabilities including container escapes and privilege escalation. This is a known limitation of wrap mode. Use only in controlled testing environments.

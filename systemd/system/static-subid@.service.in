@@ -1,0 +1,26 @@
+[Unit]
+Description=Assign deterministic subordinate UID/GID ranges
+Documentation=man:static-subid(8)
+Wants=basic.target
+After=basic.target
+
+[Service]
+Type=oneshot
+ExecStart=@CMAKE_INSTALL_FULL_LIBEXECDIR@/static-subid --subuid --subgid %i
+
+# https://github.com/shadow-maint/shadow/issues/1540
+CapabilityBoundingSet=CAP_DAC_OVERRIDE
+
+ReadWritePaths=/etc
+ProtectSystem=strict
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=strict
+SystemCallFilter=@system-service
+
+LimitCPU=5
+TasksMax=5
+MemoryMax=32M
+
+[Install]
+WantedBy=multi-user.target
