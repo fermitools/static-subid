@@ -77,7 +77,7 @@ int check_subid_exists(const struct syscall_ops *ops, const char *username,
    */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
-  char *argv[4];
+  char *argv[4] = { NULL, NULL, NULL, NULL };
   argv[0] = (char *)"getsubids";
   if (mode == SUBGID) {
     argv[1] = (char *)"-g";
@@ -301,8 +301,8 @@ int set_subid_range(const struct syscall_ops *ops, const char *username,
    */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
-  char *argv[] = {(char *)"usermod", (char *)flag, range_str, (char *)username,
-                  NULL};
+  char *argv[] = {(char *)"usermod", (char *)flag, (char *)range_str,
+                  (char *)username, NULL};
 #pragma GCC diagnostic pop
 
   /* Set up file actions - close stdin, keep stdout/stderr */
