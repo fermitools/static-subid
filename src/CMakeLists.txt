@@ -1,24 +1,22 @@
-cmake_minimum_required(VERSION 3.21)
-
 # ##############################################################################
 # Load CMake provided modules
-include(GNUInstallDirs)
 
 # ##############################################################################
 # Generate autoconf.h from template
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/autoconf.h.in"
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/autoconf.h.in"
                "${CMAKE_CURRENT_BINARY_DIR}/autoconf.h" @ONLY)
 
 # ##############################################################################
 # Source files
 set(STATIC_SUBID_LIB_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/config.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/range.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/subid.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/syscall_ops_default.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/validate.c)
-set(STATIC_SUBID_BINARY_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/range.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/subid.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/syscall_ops_default.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/util.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/validate.c
+    CACHE INTERNAL "Library source files")
+set(STATIC_SUBID_BINARY_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/main.c)
 
 # ##############################################################################
 # Create executable

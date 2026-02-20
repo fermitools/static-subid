@@ -6,6 +6,7 @@ project(static-subid C)
 # CMake modules
 include(GNUInstallDirs)
 include(CheckCCompilerFlag)
+enable_testing()
 
 # ##############################################################################
 # Require out-of-source builds
@@ -171,11 +172,11 @@ endif(NOT MAX_RANGES MATCHES "^[0-9]+$")
 
 # ##############################################################################
 # task focused cmake
-include(config/CMakeLists.txt)
-include(docs/CMakeLists.txt)
-include(src/CMakeLists.txt)
-include(systemd/CMakeLists.txt)
-include(test/CMakeLists.txt)
+add_subdirectory(config)
+add_subdirectory(docs)
+add_subdirectory(src)
+add_subdirectory(systemd)
+add_subdirectory(test)
 
 # ##############################################################################
 # Print out state summary
