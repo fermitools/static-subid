@@ -46,7 +46,7 @@ Provides a set of user-scoped systemd services that automatically allow a non-ro
 %autosetup
 
 %build
-%cmake -Wdev -Wdeprecated   \
+%cmake -Wdev -Wdeprecated --warn-uninitialized  \
        -DVERSION=%{version} \
        -DBUILD_TESTING=ON   \
        -DCMAKE_INSTALL_SYSTEMD_UNITDIR=%{_unitdir} \
