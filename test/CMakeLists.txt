@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 3.21)
-
 # ##############################################################################
 # Project / modules
 
-include(GNUInstallDirs)
 include(CTest)
 enable_testing()
 
@@ -61,7 +58,7 @@ endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
 # Helper macros
 
 macro(add_unit_test TEST_NAME)
-  add_executable(${TEST_NAME} test/${TEST_NAME}.c ${STATIC_SUBID_LIB_SOURCES})
+  add_executable(${TEST_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}.c ${STATIC_SUBID_LIB_SOURCES})
 
   target_compile_definitions(${TEST_NAME} PRIVATE _GNU_SOURCE)
   target_compile_features(
@@ -70,7 +67,7 @@ macro(add_unit_test TEST_NAME)
 
   target_include_directories(
     ${TEST_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/src
-                         ${CMAKE_SOURCE_DIR/test} ${CMAKE_BINARY_DIR})
+                         ${CMAKE_BINARY_DIR}/src)
 
   target_link_libraries(${TEST_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
