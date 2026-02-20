@@ -35,30 +35,33 @@ message(STATUS "Supported C features: ${CMAKE_C_COMPILE_FEATURES}")
 # ##############################################################################
 # Required Compiler Warnings These warnings help catch common issues
 add_compile_options(
+  -Werror # Treat all warnings as errors
   -Wall # Enable most warnings
   -Wextra # Enable extra warnings
   -Wpedantic # ISO C conformance warnings
+  -Walloca # Warn on suspicious alloca usage
+  -Wcast-align # Warn on alignment-affecting casts
+  -Wcast-qual # Warn on cast removing const/volatile
   -Wconversion # Implicit conversion warnings
-  -Wsign-conversion # Sign conversion warnings
+  -Wdisabled-optimization # Optimization disabled
+  -Wdouble-promotion # Implicit float-to-double promotion
+  -Werror=implicit-function-declaration # Error on implicit declarations
   -Wformat=2 # Enhanced format string warnings
   -Wformat-security # Format security issues
-  -Wstrict-prototypes # Require function prototypes
-  -Wstrict-overflow=2 # Overflow detection (level 2)
-  -Wvla # Variable length arrays discouraged
-  -Wshadow # Warn on shadowed variables
-  -Walloca # Warn on suspicious alloca usage
-  -Wcast-qual # Warn on cast removing const/volatile
-  -Wcast-align # Warn on alignment-affecting casts
-  -Wwrite-strings # String literals are const
-  -Wundef # Undefined macro in #if
-  -Wmissing-prototypes # Missing function prototypes
-  -Wmissing-declarations # Missing declarations
-  -Wredundant-decls # Redundant declarations
-  -Wnested-externs # Nested extern declarations
   -Winline # Inline function can't be inlined
-  -Wdisabled-optimization # Optimization disabled
-  -Werror=implicit-function-declaration # Error on implicit declarations
-  -Werror # Treat all warnings as errors
+  -Wmissing-declarations # Missing declarations
+  -Wmissing-field-initializers # Struct fields left uninitialized
+  -Wmissing-prototypes # Missing function prototypes
+  -Wnested-externs # Nested extern declarations
+  -Wnull-dereference # Potential NULL dereferences
+  -Wredundant-decls # Redundant declarations
+  -Wshadow # Warn on shadowed variables
+  -Wsign-conversion # Sign conversion warnings
+  -Wstrict-overflow=2 # Overflow detection (level 2)
+  -Wstrict-prototypes # Require function prototypes
+  -Wundef # Undefined macro in #if
+  -Wvla # Variable length arrays discouraged
+  -Wwrite-strings # String literals are const
 )
 
 # Ensure our behavior modes are defined
@@ -67,11 +70,13 @@ add_compile_definitions(_POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
 # Additional GCC features (not supported by all compilers)
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   add_compile_options(
+    -Warith-conversion # Implicit conversions in arithmetic
+    -Wduplicated-branches # Identical if/else branches
+    -Wduplicated-cond # Duplicated conditions in if/else chains
+    -Wjump-misses-init # goto skips variable initialization
     -Wlogical-op # Suspicious logical operations
-    -Wduplicated-cond # Duplicated conditions
-    -Wduplicated-branches # Duplicated branches
-    -Wnull-dereference # Potential NULL dereferences
-    -Wjump-misses-init # Jump skips variable initialization
+    -Wstringop-overflow # String operations writing past buffer end
+    -Wtrampolines # Nested functions requiring executable stack
   )
 endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
