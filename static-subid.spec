@@ -19,7 +19,7 @@ Suggests:	%{name}-systemd
 Requires:	shadow-utils
 Summary:	Assign deterministic subordinate UID/GID ranges
 %description
-static-subuid is a small utility to generate predictable subordinate UID and GID ranges for Linux users, avoiding the default dynamic allocation behavior used by many systems.
+static-subid is a small utility to generate predictable subordinate UID and GID ranges for Linux users, avoiding the default dynamic allocation behavior used by many systems.
 
 This can be useful when you need consistent UID/GID mappings across multiple systems (for example in identity-mapped rootless containers or reproducible user namespace setups).
 
