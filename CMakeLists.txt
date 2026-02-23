@@ -3,13 +3,6 @@ cmake_minimum_required(VERSION 3.21)
 project(static-subid C)
 
 # ##############################################################################
-# CMake modules
-include(GNUInstallDirs)
-include(CheckCSourceCompiles)
-include(CheckCCompilerFlag)
-enable_testing()
-
-# ##############################################################################
 # Require out-of-source builds
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR
@@ -21,12 +14,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 endif()
 
 # ##############################################################################
-# Compiler Sanity Test
-check_c_source_compiles("int main(void) { return 0; }" CAN_COMPILE)
-if(NOT CAN_COMPILE)
-  message(FATAL_ERROR "C compiler is non-functional")
-endif(NOT CAN_COMPILE)
+# CMake modules
+include(GNUInstallDirs)
+include(CheckCSourceCompiles)
+include(CheckCCompilerFlag)
+enable_testing()
 
+# ##############################################################################
+# Compiler Sanity Test
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
@@ -81,7 +76,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     -Wstringop-overflow # String operations writing past buffer end
     -Wtrampolines # Nested functions requiring executable stack
   )
-endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+endif()
 
 # ##############################################################################
 # Find our source code version string
@@ -103,19 +98,19 @@ if(NOT DEFINED CMAKE_INSTALL_SYSTEMD_UNITDIR)
   set(CMAKE_INSTALL_SYSTEMD_UNITDIR
       "/usr/lib/systemd/system"
       CACHE PATH "systemd unit directory")
-endif(NOT DEFINED CMAKE_INSTALL_SYSTEMD_UNITDIR)
+endif()
 
 if(NOT DEFINED CMAKE_INSTALL_SYSTEMD_USERUNITDIR)
   set(CMAKE_INSTALL_SYSTEMD_USERUNITDIR
       "/usr/lib/systemd/user"
       CACHE PATH "systemd user unit directory")
-endif(NOT DEFINED CMAKE_INSTALL_SYSTEMD_USERUNITDIR)
+endif()
 
 if(NOT DEFINED CMAKE_INSTALL_POLKIT_RULESDIR)
   set(CMAKE_INSTALL_POLKIT_RULESDIR
       "/usr/share/polkit-1/rules.d"
       CACHE PATH "polkit rules directory")
-endif(NOT DEFINED CMAKE_INSTALL_POLKIT_RULESDIR)
+endif()
 
 if(NOT DEFINED USERMOD_PATH)
   set(USERMOD_PATH
@@ -170,7 +165,7 @@ if(NOT MAX_RANGES MATCHES "^[0-9]+$")
       "MAX_RANGES must be a non-negative integer (got: '${MAX_RANGES}')")
 else()
   math(EXPR MAX_RANGES_INT "${MAX_RANGES}")
-endif(NOT MAX_RANGES MATCHES "^[0-9]+$")
+endif()
 
 # ##############################################################################
 # task focused cmake
