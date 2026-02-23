@@ -26,7 +26,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     set(COVERAGE_LINK_FLAGS --coverage)
 
     message(STATUS "Coverage enabled: GCC + lcov")
-  endif(LCOV_EXEC AND GENHTML_EXEC)
+  endif()
 
 elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
 
@@ -47,12 +47,9 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(COVERAGE_LINK_FLAGS -fprofile-instr-generate)
 
     message(STATUS "Coverage enabled: Clang + llvm-cov")
-  endif(
-    LLVM_PROFDATA_EXEC
-    AND LLVM_COV_EXEC
-    AND GENHTML_EXEC)
+  endif()
 
-endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+endif()
 
 # ##############################################################################
 # Helper macros
@@ -74,7 +71,7 @@ macro(add_unit_test TEST_NAME)
   if(HAVE_COVERAGE_TOOLS)
     target_compile_options(${TEST_NAME} PRIVATE ${COVERAGE_COMPILE_FLAGS})
     target_link_options(${TEST_NAME} PRIVATE ${COVERAGE_LINK_FLAGS})
-  endif(HAVE_COVERAGE_TOOLS)
+  endif()
 
   # keep a record of the binary
   list(APPEND UNIT_TEST_BINARIES ${TEST_NAME})
@@ -84,7 +81,7 @@ macro(add_unit_test TEST_NAME)
       CACHE INTERNAL "")
 
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-endmacro(add_unit_test TEST_NAME)
+endmacro()
 
 # ##############################################################################
 # Tests
@@ -100,7 +97,7 @@ if(BUILD_TESTING)
     test_binaries
     DEPENDS ${UNIT_TEST_BINARIES}
     COMMENT "Building every unit test binary")
-endif(BUILD_TESTING)
+endif()
 
 # ##############################################################################
 # Coverage target
@@ -167,6 +164,6 @@ if(BUILD_TESTING AND HAVE_COVERAGE_TOOLS)
         "Running tests and generating Clang coverage report in ${COVERAGE_OUTPUT_DIR}/index.html"
     )
 
-  endif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+  endif()
 
-endif(BUILD_TESTING AND HAVE_COVERAGE_TOOLS)
+endif()
