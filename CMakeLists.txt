@@ -10,13 +10,14 @@ enable_testing()
 
 # ##############################################################################
 # Require out-of-source builds
-file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
-if(EXISTS "${LOC_PATH}")
-  message(
-    FATAL_ERROR
-      "You cannot build in a source directory (or any directory with a CMakeLists.txt file). Please make a build subdirectory and run cmake from there."
-  )
-endif(EXISTS "${LOC_PATH}")
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR
+        "In-source builds are not allowed.\n"
+        "Create a separate build directory and run cmake from there:\n"
+        "  mkdir build && cd build && cmake ..\n"
+        "Remove CMakeCache.txt and CMakeFiles/ if they were created here."
+    )
+endif()
 
 # ##############################################################################
 # Compiler Sanity Test
