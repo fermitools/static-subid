@@ -5,6 +5,7 @@ project(static-subid C)
 # ##############################################################################
 # CMake modules
 include(GNUInstallDirs)
+include(CheckCSourceCompiles)
 include(CheckCCompilerFlag)
 enable_testing()
 
