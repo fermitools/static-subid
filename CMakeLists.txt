@@ -20,6 +20,10 @@ include(CheckCSourceCompiles)
 include(CheckCCompilerFlag)
 
 # ##############################################################################
+# setup test target
+enable_testing()
+
+# ##############################################################################
 # Compiler Sanity Test
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
