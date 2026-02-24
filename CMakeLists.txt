@@ -18,13 +18,17 @@ endif()
 include(GNUInstallDirs)
 include(CheckCSourceCompiles)
 include(CheckCCompilerFlag)
-enable_testing()
 
 # ##############################################################################
 # Compiler Sanity Test
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+
+check_c_source_compiles("int main(void) { return 0; }" CAN_COMPILE)
+if(NOT CAN_COMPILE)
+  message(FATAL_ERROR "C compiler is non-functional")
+endif(NOT CAN_COMPILE)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C Standard: C${CMAKE_C_STANDARD}")
