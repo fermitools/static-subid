@@ -10,7 +10,6 @@ Source0:	%{url}/archive/refs/tags/%{version}.tar.gz
 
 BuildRequires:  redhat-rpm-config systemd-rpm-macros
 BuildRequires:  cmake >= 3.21
-BuildRequires:	coreutils git
 BuildRequires:	gcc
 BuildRequires: (rubygem-asciidoctor or asciidoc )
 
@@ -58,16 +57,15 @@ Provides a set of user-scoped systemd services that automatically allow a non-ro
 %cmake_install
 
 %check
-%ctest
+%ctest --output-on-failure
 
 
 %files
-%defattr(0644,root,root,0755)
 %license LICENSE
 %doc %{_mandir}
 %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
-%ghost %dir %{_sysconfdir}/%{name}/%{name}.conf.d
-%attr(0755,root,root) %{_libexecdir}/*
+%dir %{_sysconfdir}/%{name}/%{name}.conf.d
+%attr(0755,root,root) %{_libexecdir}/%{name}
 
 %files systemd
 %doc docs/README.systemd
@@ -80,5 +78,5 @@ Provides a set of user-scoped systemd services that automatically allow a non-ro
 
 
 %changelog
-* Mon Feb 16 2026 Pat Riehecky <riehecky@fnal.gov> - 0.1.0
+* Mon Feb 16 2026 Pat Riehecky <riehecky@fnal.gov> - 0.1.0-1
 - Initial release
