@@ -2,7 +2,6 @@
 # Project / modules
 
 include(CTest)
-enable_testing()
 
 # ##############################################################################
 # Coverage configuration (compiler aware, optional)
