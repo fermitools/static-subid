@@ -162,6 +162,17 @@ To disable shadow-utils auto-assignment, set *SUB_UID_COUNT* and *SUB_GID_COUNT*
 
 Keys read from _/etc/login.defs_ match keys read from the *static-subid* configs. Unknown keys are ignored.
 
+== EXCLUDING SPECIFIC USERS
+
+You cannot mask a user directly. What you can do is set *SKIP_IF_EXISTS* to true and perform:
+ 
+....
+usermod --add-subuid $(id -u ${MASKUSER})-$(id -u ${MASKUSER}) ${MASKUSER}
+usermod --add-subgid $(id -u ${MASKUSER})-$(id -u ${MASKUSER}) ${MASKUSER}
+....
+
+This will setup a single subuid and for the user which matches their existing user id.
+
 == EXAMPLES
 
 === Basic Configuration
