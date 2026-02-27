@@ -6,7 +6,7 @@ Release:	1%{?dist}
 License:	BSD-3-Clause and CC-PDDC
 
 URL:		https://github.com/fermitools/%{name}
-Source0:	%{url}/archive/refs/tags/%{version}.tar.gz
+Source0:	%{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  redhat-rpm-config systemd-rpm-macros
 BuildRequires:  cmake >= 3.21
