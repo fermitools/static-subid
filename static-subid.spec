@@ -1,20 +1,18 @@
 Name:		static-subid
 Version:	0.1.0
-Release:	1%{?dist}
+Release:	%autorelease
 
 # Only the test_framework is CC-PDDC
 License:	BSD-3-Clause and CC-PDDC
 
 URL:		https://github.com/fermitools/%{name}
-Source0:	%{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:	%{url}/archive/%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  redhat-rpm-config systemd-rpm-macros
 BuildRequires:  cmake >= 3.21
 BuildRequires:	gcc
 BuildRequires: (rubygem-asciidoctor or asciidoc )
 
-
-Suggests:	%{name}-systemd
 Requires:	shadow-utils
 Summary:	Assign deterministic subordinate UID/GID ranges
 %description
@@ -27,6 +25,7 @@ Subordinate IDs are used by user namespaces to map container UIDs/GIDs back to h
 %package systemd
 Requires:       %{name} = %{version}-%{release}
 Requires:       systemd
+Enhances:	%{name}
 Summary:        Systemd integration for static-subid
 BuildArch:	noarch
 %description systemd
@@ -35,6 +34,7 @@ Provides a systemd service to generate subids for a username
 %package systemd-user-permit
 Requires:       %{name}-systemd = %{version}-%{release}
 Requires:	systemd
+Enhances:	%{name}-systemd
 Summary:	Systemd user integration for static-subid
 BuildArch:	noarch
 %description systemd-user-permit
@@ -45,8 +45,7 @@ Provides a set of user-scoped systemd services that automatically allow a non-ro
 %autosetup
 
 %build
-%cmake -Wdev -Wdeprecated --warn-uninitialized  \
-       -DVERSION=%{version} \
+%cmake -DVERSION=%{version} \
        -DBUILD_TESTING=ON   \
        -DCMAKE_INSTALL_SYSTEMD_UNITDIR=%{_unitdir} \
        -DCMAKE_INSTALL_SYSTEMD_USERUNITDIR=%{_userunitdir} \
@@ -71,12 +70,28 @@ Provides a set of user-scoped systemd services that automatically allow a non-ro
 %doc docs/README.systemd
 %{_unitdir}/static-subid@.service
 
+%post systemd
+%systemd_post static-subid@.service
+
+%preun systemd
+%systemd_preun static-subid@.service
+
+%postun systemd
+%systemd_postun_with_restart static-subid@.service
+
 %files systemd-user-permit
 %doc docs/README.systemd
 %{_userunitdir}/setup-static-subid.service
 %{_datarootdir}/polkit-1/rules.d/50-static-subid.rules
 
+%post systemd-user-permit
+%systemd_post_user setup-static-subid.service
+
+%preun systemd-user-permit
+%systemd_preun_user setup-static-subid.service
+
+%postun systemd-user-permit
+%systemd_postun_user setup-static-subid.service
 
 %changelog
-* Mon Feb 16 2026 Pat Riehecky <riehecky@fnal.gov> - 0.1.0-1
-- Initial release
+%autochangelog
