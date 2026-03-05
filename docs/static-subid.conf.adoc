@@ -76,7 +76,7 @@ Must not exceed compile-time limit (typically 128 * 65536). This should be suffi
 *SUB_GID_COUNT* (default: 65536)::
     Number of subordinate GIDs allocated per user.
 +
-Must not exceed compile-time limit (typically (128 * 65535)). This should be sufficient for even high density userspace container environments.
+Must not exceed compile-time limit (typically (128 * 65536)). This should be sufficient for even high density userspace container environments.
 
 === Behavioral Options
 
@@ -165,13 +165,13 @@ Keys read from _/etc/login.defs_ match keys read from the *static-subid* configs
 == EXCLUDING SPECIFIC USERS
 
 You cannot mask a user directly. What you can do is set *SKIP_IF_EXISTS* to true and perform:
- 
+
 ....
 usermod --add-subuid $(id -u ${MASKUSER})-$(id -u ${MASKUSER}) ${MASKUSER}
 usermod --add-subgid $(id -u ${MASKUSER})-$(id -u ${MASKUSER}) ${MASKUSER}
 ....
 
-This will setup a single subuid and for the user which matches their existing user id.
+This will setup a single subuid and subgid for the user which matches their existing user id.
 
 == EXAMPLES
 
