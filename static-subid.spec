@@ -10,7 +10,7 @@ Source0:	%{url}/archive/%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  redhat-rpm-config systemd-rpm-macros
 BuildRequires:  cmake >= 3.21
-BuildRequires:	gcc
+BuildRequires:  gcc
 BuildRequires: (rubygem-asciidoctor or asciidoc )
 
 Requires:	shadow-utils
@@ -27,7 +27,7 @@ Requires:       %{name} = %{version}-%{release}
 Requires:       systemd
 Enhances:	%{name}
 Summary:        Systemd integration for static-subid
-BuildArch:	noarch
+BuildArch:      noarch
 %description systemd
 Provides a systemd service to generate subids for a username
 

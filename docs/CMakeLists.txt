@@ -38,7 +38,7 @@ elseif(ASCIIDOC AND A2X)
   add_custom_target(doc ALL DEPENDS ${PROJECT_BINARY_DIR}/static-subid.conf.5
                                     ${PROJECT_BINARY_DIR}/static-subid.8)
 else()
-  message(FATAL_ERROR "Either asciidoctor required for manpages")
+  message(FATAL_ERROR "Either asciidoctor or asciidoc/a2x is required for manpage generation")
 endif()
 
 # Install the actual manpage
